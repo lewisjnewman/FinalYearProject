@@ -1,8 +1,6 @@
 pragma solidity >= 0.8.0 < 0.9.0;
 pragma experimental ABIEncoderV2;
 
-// TODO consider creating a repository factory contract - might make it easier to implement repo forks later on?
-
 contract Repository {
 
     // the owner of this repository
@@ -54,6 +52,9 @@ contract Repository {
 
         // The name that this branch was given
         string name;
+
+        // List of people who are allowed to edit code on a branch
+        address[] editors;
     }
 
 
@@ -66,26 +67,46 @@ contract Repository {
         // Set the repository owner to the person deploying this smart contract
         owner = msg.sender;
 
-        // Create an initial mainline branch
-        branches.push(Branch(msg.sender, "mainline"));
+        // Create the mainline branch
+        Branch memory b = Branch(owner, "mainline", new address[](0));     
+
+        // Push the mainline branch onto the list of branches
+        branches.push(b);
+
+        // Add the owner of the branch as an editor
+        branches[branches.length-1].editors.push(owner);
 
         // Create an initial commit on the mainline branch with no files in it
-        commits.push(Commit(msg.sender, 0, "Null Commit", block.timestamp, 0, false, 0));
+        commits.push(Commit(owner, 0, "Null Commit", block.timestamp, 0, false, 0));
 
         // Set the repository name
         name = _name;
     }
 
 
-    modifier CheckBranchOwner(uint _branchID) {
+    modifier CheckBranchAccess(uint _branchID) {
         // Check that the branch that the commit is being added to is owned by the person making the commit
         require(_branchID < branches.length, "Invalid Branch ID");
-        require(msg.sender == branches[_branchID].owner, "You are not the owner of this branch");
+        
+        Branch memory branch = branches[_branchID];
+
+        for (uint i = 0; i<branch.editors.length; i++) {
+            if (branch.editors[i] == msg.sender){
+                return;
+            }
+        }
+
+        require(false, "Transaction Sender is not part of the branch editors list");
         _;
     }
 
+    modifier CheckBranchOwner(uint _branchID) {
+        require(_branchID < branches.length, "Invalid Branch ID");
+        require(msg.sender == branches[_branchID].owner, "Transaction Sender is not the branch owner");
+        _;
+    }
 
-    modifier CheckCommitOwner(uint _commitID) {
+    modifier CheckCommitAccess(uint _commitID) {
         require(_commitID < commits.length, "Invalid Commit ID");
         require(msg.sender == commits[_commitID].author, "You are not the owner of this commit");
         _;
@@ -212,9 +233,9 @@ contract Repository {
 
 
     // An External function to be used in a transaction to create a new commit and specify the branch it belongs to
-    function MakeCommit(uint _branchID, uint previous_commit, string calldata _comment, string calldata file_paths_string, string calldata ipfs_hashes_string) external CheckBranchOwner(_branchID) {
+    function MakeCommit(uint _branchID, uint previous_commit, string calldata _comment, string calldata file_paths_string, string calldata ipfs_hashes_string) external CheckBranchAccess(_branchID) {
 
-        // TODO check previous commit
+        require(previous_commit == MostRecentCommitID(_branchID), "Unable to add commit, previous commit is not the most recent commit made on this branch");
 
         string[] memory file_paths = splitString(file_paths_string);
         string[] memory ipfs_hashes = splitString(ipfs_hashes_string);
@@ -230,7 +251,7 @@ contract Repository {
 
 
     // An Internal function to create a new commit similar to the function above, this is used by the ForkNewBranch function to clone a commit onto a new branch
-    function MakeCommitInternal(uint _branchID, uint previous_commit, string memory _comment, File[] memory _files) internal CheckBranchOwner(_branchID) {
+    function MakeCommitInternal(uint _branchID, uint previous_commit, string memory _comment, File[] memory _files) internal CheckBranchAccess(_branchID) {
 
         commits.push(Commit(msg.sender, _branchID, _comment, block.timestamp, previous_commit, false, 0));
 
@@ -244,7 +265,14 @@ contract Repository {
     function ForkNewBranch(string memory _name, uint _sourceBranch) public {
         require(_sourceBranch < branches.length);
 
-        branches.push(Branch(msg.sender, _name));
+        owner = msg.sender;
+
+        Branch memory newBranch = Branch(owner, _name, new address[](0));
+
+        branches.push(newBranch);
+        
+        // Add the owner of the branch as an editor
+        branches[branches.length-1].editors.push(owner);
 
         uint commitID = MostRecentCommitID(_sourceBranch);
 
@@ -254,7 +282,7 @@ contract Repository {
     }
 
     // An External function used to create a squash merge between parent branch and child branch, a single commit is created in the parent branch that has all the changes from the child branch in it
-    function SquashMerge(uint parent_branch, uint child_branch, string memory _comment) public CheckBranchOwner(parent_branch) {
+    function SquashMerge(uint parent_branch, uint child_branch, string memory _comment) public CheckBranchAccess(parent_branch) {
 
         // Get the most recent commit on the child branch
         uint commitID = MostRecentCommitID(child_branch);
@@ -266,7 +294,9 @@ contract Repository {
     }
 
     // An External function to be used in a transaction to create a new commit with 2 parents
-    function MakeCommitMultiParent(uint parent_branch, uint previous_commit, uint previous2_commit, string calldata _comment, string calldata file_paths_string, string calldata ipfs_hashes_string) external CheckBranchOwner(parent_branch) {
+    function MakeCommitMultiParent(uint parent_branch, uint previous_commit, uint previous2_commit, string calldata _comment, string calldata file_paths_string, string calldata ipfs_hashes_string) external CheckBranchAccess(parent_branch) {
+
+        require(previous_commit == MostRecentCommitID(parent_branch), "Unable to add commit, previous commit is not the most recent commit made on this branch");
 
         string[] memory file_paths = splitString(file_paths_string);
         string[] memory ipfs_hashes = splitString(ipfs_hashes_string);
@@ -281,6 +311,49 @@ contract Repository {
     }
 
 
+    // Extern function to add an editor to a branch
+    function AddEditorToBranch(uint _branchID, address new_editor) external CheckBranchOwner(_branchID) {
+
+        // check that the editor has not already been added to the branch
+        for(uint i = 0; i < branches[_branchID].editors.length; i++){
+            if (new_editor == branches[_branchID].editors[i]){
+                // new editor is already an editor of the branch, revert this transaction
+                revert();
+            }
+        }
+
+        // append the editor to the list of approved branch editors
+        branches[_branchID].editors.push(new_editor);
+    }
+
+
+    function RemoveEditorFromBranch(uint _branchID, address editor) external CheckBranchOwner(_branchID) {
+
+        int index = -1;
+        for(uint i = 0; i < branches[_branchID].editors.length; i++){
+            if (editor == branches[_branchID].editors[i]){
+                index = int(i);
+                break;
+            }
+        }
+        if (index == -1){
+            //editor is not a member of the branch anyway
+            //revert the transaction as nothing will change
+            revert();
+        }
+
+        // copy the last element to the place of the current element
+        branches[_branchID].editors[uint(index)] = branches[_branchID].editors[branches[_branchID].editors.length-1];
+
+        // delete the last element
+        delete branches[_branchID].editors[branches[_branchID].editors.length-1];
+    }
+
+    function GetBranchEditors(uint _branchID) view external returns(address[] memory) {
+        require(_branchID < branches.length, "Not a valid branch id");
+
+        return branches[_branchID].editors;
+    }
 
     // Private Helper function to split a single string delimited by a character into an array of strings
     function splitString(string calldata str) pure internal returns(string[] memory){

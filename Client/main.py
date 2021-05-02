@@ -313,6 +313,27 @@ def load_repository(private_key):
 
     return repo
 
+
+def branch_info(repo: RepositoryContractWrapper):
+    branch_data = repo.get_branch(current_branch)
+    editors = repo.get_branch_editors(current_branch)
+
+    print(f"Branch ID: {current_branch}")
+    print(f"Branch Name: {branch_data[1]}")
+    print(f"Branch Owner: {branch_data[0]}")
+    print(f"Branch Editors: {editors}")
+
+
+def add_editor(repo: RepositoryContractWrapper, address: str):
+    print(f"Adding \"{address}\" to branch")
+    repo.add_editor_to_branch(current_branch, address)
+
+
+def rm_editor(repo: RepositoryContractWrapper, address: str):
+    print(f"Removing \"{address}\" from branch")
+    repo.remove_editor_from_branch(current_branch, address)
+
+
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(title="subcommand")
 
@@ -348,6 +369,20 @@ parser_clone = subparsers.add_parser("clone")
 parser_clone.set_defaults(subcommand="clone")
 parser_clone.add_argument("repo_address", help="The name of the repository")
 
+parser_branchinfo = subparsers.add_parser("branchinfo")
+parser_branchinfo.set_defaults(subcommand="branchinfo")
+
+parser_add_editor = subparsers.add_parser("addeditor")
+parser_add_editor.set_defaults(subcommand="addeditor")
+parser_add_editor.add_argument("account_address", help="The address of the account you want to add as an editor")
+
+parser_rm_editor = subparsers.add_parser("rmeditor")
+parser_rm_editor.set_defaults(subcommand="rmeditor")
+parser_rm_editor.add_argument("account_address", help="The address of the account you want to remove as an editor")
+
+parser_branchinfo = subparsers.add_parser("branchinfo")
+parser_branchinfo.set_defaults(subcommand="branchinfo")
+
 parser_repo = subparsers.add_parser("repo")
 parser_repo.set_defaults(subcommand="repo")
 
@@ -372,6 +407,15 @@ def main(args):
     elif args.subcommand == "branch":
         repo = load_repository(private_key)
         new_branch(repo, args.branch_name)
+    elif args.subcommand == "branchinfo":
+        repo = load_repository(private_key)
+        branch_info(repo)
+    elif args.subcommand == "addeditor":
+        repo = load_repository(private_key)
+        add_editor(repo, args.account_address)
+    elif args.subcommand == "rmeditor":
+        repo = load_repository(private_key)
+        rm_editor(repo, args.account_address)
     elif args.subcommand == "checkout":
         repo = load_repository(private_key)
         checkout(repo, int(args.branch_id))

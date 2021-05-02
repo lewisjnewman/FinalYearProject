@@ -1,9 +1,8 @@
 from web3 import Web3, HTTPProvider
 import pathlib
 import json
-from sha3 import keccak_256
 from coincurve import PublicKey
-from getpass import getpass
+from sha3 import keccak_256
 
 CONTRACT_BUILD_DIR = pathlib.Path(__file__).parent.parent.absolute() / "Contracts" / "target"
 
@@ -42,7 +41,7 @@ class RepositoryContractWrapper(object):
     def _make_transaction(self):
         ret = {
             "nonce": self.w3.eth.getTransactionCount(account=self._account_address),
-            "gas": 3000000,
+            "gas": 6000000,
             "gasPrice": self.w3.toWei("50", "gwei")
         }
 
@@ -128,6 +127,30 @@ class RepositoryContractWrapper(object):
 
         tx_receipt = self.w3.eth.waitForTransactionReceipt(tx_hash)
 
+    def add_editor_to_branch(self, branch_id, account_address):
+        AddEditorToBranch = self._repo_contract.get_function_by_name("AddEditorToBranch")
+
+        account_address = self.w3.toChecksumAddress(account_address)
+
+        # Make the smart contract Transaction
+        tx = AddEditorToBranch(branch_id, account_address).buildTransaction(self._make_transaction())
+        signed_tx = self.w3.eth.account.signTransaction(tx, self._private_key)
+        tx_hash = self.w3.eth.sendRawTransaction(signed_tx.rawTransaction)
+
+        tx_receipt = self.w3.eth.waitForTransactionReceipt(tx_hash)
+
+    def remove_editor_from_branch(self, branch_id, account_address):
+        RemoveEditorFromBranch = self._repo_contract.get_function_by_name("RemoveEditorFromBranch")
+
+        account_address = self.w3.toChecksumAddress(account_address)
+
+        # Make the smart contract Transaction
+        tx = RemoveEditorFromBranch(branch_id, account_address).buildTransaction(self._make_transaction())
+        signed_tx = self.w3.eth.account.signTransaction(tx, self._private_key)
+        tx_hash = self.w3.eth.sendRawTransaction(signed_tx.rawTransaction)
+
+        tx_receipt = self.w3.eth.waitForTransactionReceipt(tx_hash)
+
 
     def get_branch(self, id):
         return self._repo_contract.functions.branches(id).call()
@@ -169,6 +192,9 @@ class RepositoryContractWrapper(object):
 
     def get_repository_name(self):
         return self._repo_contract.functions.name().call()
+
+    def get_branch_editors(self, branch_id):
+        return self._repo_contract.functions.GetBranchEditors(branch_id).call()
 
 # This is here just for testing
 if __name__ == "__main__":
