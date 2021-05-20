@@ -367,7 +367,7 @@ parser_init.add_argument("repo_name", help="The name of the repository")
 
 parser_clone = subparsers.add_parser("clone")
 parser_clone.set_defaults(subcommand="clone")
-parser_clone.add_argument("repo_address", help="The name of the repository")
+parser_clone.add_argument("repo_address", help="The address of the repository to clone")
 
 parser_branchinfo = subparsers.add_parser("branchinfo")
 parser_branchinfo.set_defaults(subcommand="branchinfo")
