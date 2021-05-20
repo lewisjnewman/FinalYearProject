@@ -430,7 +430,7 @@ def main(args):
             three_way_merge(repo, int(args.child_branch_id), args.message)
     elif args.subcommand == "fetch":
         repo = load_repository(private_key)
-        fetch(repo, args.commit_id)
+        fetch(repo, int(args.commit_id))
     elif args.subcommand == "log":
         repo = load_repository(private_key)
         list_commits(repo)

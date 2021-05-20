@@ -87,15 +87,22 @@ contract Repository {
     modifier CheckBranchAccess(uint _branchID) {
         require(_branchID < branches.length, "Invalid Branch ID");
         
-        Branch memory branch = branches[_branchID];
+        {
 
-        for (uint i = 0; i<branch.editors.length; i++) {
-            if (branch.editors[i] == msg.sender){
-                return;
+            Branch memory branch = branches[_branchID];
+
+            bool is_ok = false;
+
+            for (uint i = 0; i<branch.editors.length; i++) {
+                if (branch.editors[i] == msg.sender){
+                    is_ok = true;
+                }
             }
+
+            require(is_ok, "Transaction Sender is not part of the branch editors list");
+
         }
 
-        require(false, "Transaction Sender is not part of the branch editors list");
         _;
     }
 
