@@ -1,19 +1,24 @@
 # Prerequisites
 
-+ A method of running a private ethereum blockchain with the api listening at `http://localhost:7545`. It is recommended to use ganache by trufflesuite for setting this up. More information can be found at https://www.trufflesuite.com/ganache.
-+ Docker and docker-compose must be installed. Docker is used to run the IPFS-Cluster where the file contents are saved. Information for installing docker can be found at https://docs.docker.com/get-docker/.
-+ An up to date version of python 3 must be installed in order to use the vcs client. Python 3.8+ should work however if in doubt then python 3.9.4 is the version that was used to develop it and definitely works.
-+ The required python packages. These are part of the Client program and are listed in requirements.txt. They can be installed with the following command: `pip install -r requirements.txt`
-+ Solidity compiler. The output from compiling the smart contract code is provided inside ./Contracts/target/ however if you wish to build the source code yourself then the appropriate solidity compiler must be installed. version 0.8.4 will definitely work however any 0.8.* should not cause any issues. Information about installing solidity can be found from the documentation at https://docs.soliditylang.org/en/v0.8.4/installing-solidity.html.
-+ In order to be able to merge conflicts in files, the diff3 command (part of diffutils) is used, and therefore must be installed as a dependancy.
++ All of the testing and development occured on linux systems, the majority of them being ubuntu derived.  
++ A method of running a private ethereum blockchain with the api listening at `http://localhost:7545`. It is recommended to use ganache by trufflesuite for setting this up. More information can be found at https://www.trufflesuite.com/ganache. The linux download provides an app image file which can be run. Alternatively the source code is accessible at https://github.com/trufflesuite/ganache. The repository readme contains instructions for building ganache from source using npm. 
++ Docker and docker-compose must be installed. Docker is used to run the IPFS-Cluster where the file contents are saved. Information for installing docker and docker-compose can be found at https://docs.docker.com/get-docker/.
++ An up to date version of python 3 must be installed in order to use the Client program. Python 3.8+ should work however if in doubt then python 3.9.4 is the version that was used to develop it and definitely works.
++ The required python packages. These are part of the Client program and are listed in requirements.txt. They can be installed with the following command: `pip3 install -r requirements.txt`
++ Solidity compiler. The output from compiling the smart contract code is provided inside ./Contracts/target/ however if you wish to build the source code yourself then the appropriate solidity compiler must be installed. version 0.8.4 will definitely work however any 0.8.* should not cause any issues. Information about installing solidity can be found from the documentation at https://docs.soliditylang.org/en/v0.8.4/installing-solidity.html. The build.sh file in ./Contracts then runs the compiler and outputs the files in the right directory with the right name.
++ In order to be able to merge conflicts in files, the diff3 command (part of diffutils) is used, and therefore must be installed as a dependancy. It should be installed by default on the majority of linux systems.
 
 # Setup
 
 Before using the client both a private ethereum blockchain should be started as well as a private ipfs cluster.
 
-The ipfs cluster can be started using the following command inside the IPFS-Cluster directory  
-```bash
-$ docker-compose up --build
+The ipfs cluster can be started using the following commands inside the IPFS-Cluster directory. If this is the first time running the cluster then the following command should be used. This will create a folder in the IPFS-Cluster directory called compose.  
+```
+# docker-compose up --build
+```
+If that folder has already been created then the --build flag must be removed from the command. This is the following command that needs to be run in that circumstance.
+```
+# docker-compose up
 ```
 
 When using the ganache gui program using the quickstart workspace with the defaults should be sufficent. Once it has started the quickspace workshop you should be met with the following window showing a list of already setup accounts: ![Ganache Quickstart](GanacheQuickstart.png)
@@ -22,13 +27,13 @@ Clicking the key symbol on the far right side brings up a window showing the add
 
 # Using the client program
 
-./Client/main.py is the entry point for the python client program. It is important to note that with the way it has been coded it expects to be able to access the Repository.bin and Repository.abi files inside ./Contracts/target/ .
+./Client/main.py is the entry point for the python client program. It is important to note that with the way it has been coded it expects to be able to access the Repository.bin and Repository.abi files inside ./Contracts/target/ and does so by working out the absolute path of the eth_wrapper.py file, moving 1 directory up and then going down `Contracts/target/`. If you start moving where the python program is relative to where the results of the smart contract compiler are placed then you may begin to break stuff.
 
 For the following examples a new directory called testing has been created to handle the repository that is created, and that the client program is invoked using the relative path `../Client/main.py`. It is also marked as executable so it can be directly executed for brevity.
 
 Similar to how git has a .git directory which signifies the root of the repository and contains important metadata such as the remote information, this version control system has a file at the root of the repository called `.repodata.json`. Whenever you are running a command you must be running it in the same directory as the `.repodata.json`. The 2 exceptions to this rule being the init command and the clone command, which are 2 commands which will initially create this file.
 
-When running any of the following commands the program will require the private key of the account you wish to use. By default it will prompt you to enter the private key using a password style prompt. In order to make it easier to use it will instead use the `VCS_PRIVATE_KEY` environment variable as the private key if it has been set. It can be set once and used repeatedly using the following command:
+When running any of the following commands the program will require the private key of the account you wish to use. By default it will prompt you to enter the private key using a blank password style prompt. In order to make it easier to use it will instead use the `VCS_PRIVATE_KEY` environment variable as the private key if it has been set. It can be set once and used repeatedly using the following command:
 ```bash
 $ export VCS_PRIVATE_KEY=<privatekey-hex>
 ```
@@ -114,3 +119,7 @@ $ ../Client/main.py addeditor <account-address>
 $ ../Client/main.py rmeditor <account-address>
 ```
 
+Updating the repository to the contents of an arbitrary commit is done with the fetch command
+```bash
+$ ../Client/main.py fetch <commit-id>
+```
