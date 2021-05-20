@@ -57,7 +57,7 @@ contract Repository {
         address[] editors;
     }
 
-
+    // Where the branch, commit and file data is acutally stored
     Branch[] public branches;
     Commit[] public commits;
     File[] public files;
@@ -83,9 +83,8 @@ contract Repository {
         name = _name;
     }
 
-
+    // Given a branch id, check that the message sender is listed as a branch editor
     modifier CheckBranchAccess(uint _branchID) {
-        // Check that the branch that the commit is being added to is owned by the person making the commit
         require(_branchID < branches.length, "Invalid Branch ID");
         
         Branch memory branch = branches[_branchID];
@@ -100,29 +99,31 @@ contract Repository {
         _;
     }
 
+    // Given a branch id, check that the message sender is the branch owner
     modifier CheckBranchOwner(uint _branchID) {
         require(_branchID < branches.length, "Invalid Branch ID");
         require(msg.sender == branches[_branchID].owner, "Transaction Sender is not the branch owner");
         _;
     }
 
+    // Given a commit id, check that the message sender is the commit owner
     modifier CheckCommitAccess(uint _commitID) {
         require(_commitID < commits.length, "Invalid Commit ID");
         require(msg.sender == commits[_commitID].author, "You are not the owner of this commit");
         _;
     }
 
-
+    // Function that returns the total number of branches across the repository
     function GetBranchesCount() public view returns(uint) {
         return uint(branches.length);
     }
 
-
+    // Function that returns the total number of commits across all branches
     function GetCommitsCount() public view returns(uint) {
         return uint(commits.length);
     }
 
-
+    // Function that returns the total number of commits in a branch
     function GetCommitsCount(uint _branchID) public view returns (uint) {
         require(_branchID < branches.length, "Incorrect Branch ID - GetCommitsCount");
 
@@ -135,7 +136,7 @@ contract Repository {
         return commitCount;
     }
 
-
+    // Function that returns the total number of files in a commit
     function GetFilesCount(uint _commitID) public view returns (uint) {
         require(_commitID < commits.length, "Incorrect Commit ID - GetFilesCount");
 
@@ -171,6 +172,7 @@ contract Repository {
         return _files;
     }
 
+    // Function that returns a list of IDs of commits given the id of a branch
     function GetCommitsFromBranch(uint branchID) public view returns(uint[] memory){
         require(branchID < branches.length, "Incorrect Branch ID - GetCommitsFromBranch");
 
@@ -206,7 +208,7 @@ contract Repository {
         return i;
     }
 
-
+    // Function that returns a list of IDs of files given the id of a commit
     function GetFilesForCommit(uint _commitID) internal view returns(File[] memory) {
         require(_commitID < commits.length, "Incorrect Commit ID - GetFilesForCommit");
 
@@ -326,7 +328,7 @@ contract Repository {
         branches[_branchID].editors.push(new_editor);
     }
 
-
+    // Extern function to remove an editor from a branch
     function RemoveEditorFromBranch(uint _branchID, address editor) external CheckBranchOwner(_branchID) {
 
         int index = -1;

@@ -383,9 +383,9 @@ parser_rm_editor.add_argument("account_address", help="The address of the accoun
 parser_branchinfo = subparsers.add_parser("branchinfo")
 parser_branchinfo.set_defaults(subcommand="branchinfo")
 
-parser_repo = subparsers.add_parser("repo")
-parser_repo.set_defaults(subcommand="repo")
-
+parser_fetch = subparsers.add_parser("fetch")
+parser_fetch.set_defaults(subcommand="fetch")
+parser_fetch.add_argument("commit_id", help="The id of the commit that you want to fetch")    
 
 def main(args):
     try:
@@ -428,8 +428,9 @@ def main(args):
             squash_merge(repo, int(args.child_branch_id), args.message)
         else:
             three_way_merge(repo, int(args.child_branch_id), args.message)
-    elif args.subcommand == "repo":
-        pass
+    elif args.subcommand == "fetch":
+        repo = load_repository(private_key)
+        fetch(repo, args.commit_id)
     elif args.subcommand == "log":
         repo = load_repository(private_key)
         list_commits(repo)
